@@ -1,0 +1,60 @@
+---
+- hosts: all
+  become: yes
+  # become_user: root
+  # become_method: su
+  gather_facts: no
+  
+  vars:
+    ansible_user: unixfox
+    ansible_become_pass: dfghjklm
+  
+  vars_prompt:
+    - name: userpasswd
+      prompt: "new password for unixfox and root user"
+      private: yes
+      encrypt: "sha512_crypt" # 656000 rounds hardcoded in ansible :(
+      confirm: yes
+      salt_size: 8
+
+  tasks:
+    - name: Install python3 apt
+      raw: |
+        su - root <<!
+        dfghjklm
+        apt install python3-apt -y
+        !
+    - name: Set authorized keys taken from url
+      ansible.posix.authorized_key:
+        user: unixfox
+        state: present
+        key: https://github.com/unixfox.keys
+    - name: Install apt packages
+      apt:
+        pkg:
+          - sudo
+          - wget
+          - curl
+          - htop
+          - vim
+        state: present
+        update_cache: true
+    - name: Add unixfox to group sudo
+      user:
+        name: 'unixfox'
+        groups: sudo
+        append: yes
+    - name: Allow 'sudo' group to have passwordless sudo
+      lineinfile:
+        dest: /etc/sudoers
+        state: present
+        regexp: '^%sudo'
+        line: '%sudo ALL=(ALL) NOPASSWD: ALL'
+        validate: /usr/sbin/visudo -cf %s
+    - name: change shadow password hash for {{ item }} user
+      user:
+        user: "{{ item }}"
+        password: "{{ userpasswd }}"
+      loop:
+        - unixfox
+        - root
