@@ -1,8 +1,12 @@
+# startup.nsh
+# ansible-playbook -i hosts playbook.yml --ask-pass
+# debian backports
+
 ---
 - hosts: all
   become: yes
-  # become_user: root
-  # become_method: su
+  become_user: root
+  become_method: su
   gather_facts: no
   
   vars:
